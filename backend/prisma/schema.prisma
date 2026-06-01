@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User?
+  settings   OrganizationSettings?
+  products   Product[]
+  movements  InventoryMovement[]
+  @@map("organizations")
+}
+
+model User {
+  id             String   @id @default(cuid())
+
+  organizationId String   @unique
+
+  email          String
+  passwordHash   String
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdProducts Product[] @relation("ProductCreatedBy")
+  updatedProducts Product[] @relation("ProductUpdatedBy")
+
+  movements InventoryMovement[]
+
+  @@unique([organizationId, email])
+  @@map("users")
+
+}
+
+model OrganizationSettings {
+  id                       String   @id @default(cuid())
+
+  organizationId           String   @unique
+
+  defaultLowStockThreshold Int      @default(5)
+
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId],references: [id])
+  @@map("organization_settings")
+}
+
+model Product {
+  id                String   @id @default(cuid())
+
+  organizationId    String
+
+  name              String
+  sku               String
+
+  description       String?
+
+  quantityOnHand    Int      @default(0)
+
+  costPrice         Decimal? @db.Decimal(10, 2)
+  sellingPrice      Decimal? @db.Decimal(10, 2)
+
+  lowStockThreshold Int?
+
+  createdById       String?
+  updatedById       String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId],references: [id])
+
+  createdBy User? @relation("ProductCreatedBy",fields: [createdById],references: [id])
+
+  updatedBy User? @relation("ProductUpdatedBy",fields: [updatedById],references: [id])
+
+  movements InventoryMovement[]
+
+  @@unique([organizationId, sku])
+
+  @@index([organizationId])
+
+  @@map("products")
+}
+
+model InventoryMovement {
+  id             String   @id @default(cuid())
+
+  organizationId String
+
+  productId      String
+
+  userId         String?
+
+  quantityDelta  Int
+
+  note           String?
+
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId],references: [id])
+
+  product Product @relation(fields: [productId],references: [id])
+
+  user User? @relation(fields: [userId],references: [id])
+
+  @@index([organizationId])
+  @@index([productId])
+  @@index([createdAt])
+
+  @@map("inventory_movements")
+}
