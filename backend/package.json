@@ -6,7 +6,7 @@
   "author": "",
   "type": "module",
   "engines": {
-    "node": ">=26.0.0"
+    "node": "24.x"
   },
   "main": "dist/server.js",
   "scripts": {
